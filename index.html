@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyBuilder</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14161a;--mu:#667085;--ac:#4f46e5;--bd:#e4e7ec}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1115;--card:#181b22;--tx:#eef0f4;--mu:#9aa3b2;--bd:#2a2f3a}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{padding:14px 20px;font-weight:700;font-size:20px;border-bottom:1px solid var(--bd)}
+main{display:grid;grid-template-columns:340px 1fr;gap:16px;padding:16px;height:calc(100vh - 56px)}
+@media(max-width:800px){main{grid-template-columns:1fr;height:auto}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+textarea{width:100%;min-height:150px;border:1px solid var(--bd);border-radius:8px;padding:10px;font:inherit;background:transparent;color:inherit;resize:vertical}
+button{border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--ac);color:#fff}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}button:disabled{opacity:.5}
+iframe{flex:1;width:100%;min-height:480px;border:1px solid var(--bd);border-radius:8px;background:#fff}
+#msg{color:var(--mu);font-size:14px;min-height:20px}.row{display:flex;gap:8px;flex-wrap:wrap}
+</style></head><body>
+<header id="title"></header>
+<main>
+ <div class="card">
+  <label id="hint" style="font-weight:600"></label>
+  <textarea id="prompt" placeholder="Example: A ride booking app for Ado-Ekiti with fare calculator and driver list"></textarea>
+  <button id="go">Build it</button>
+  <div id="msg"></div>
+  <div class="row"><button class="sec" id="dl" disabled>Download HTML</button><button class="sec" id="reset">New app</button></div>
+ </div>
+ <div class="card"><b>Preview</b><iframe id="pv" sandbox="allow-scripts allow-forms allow-modals"></iframe></div>
+</main>
+<script>
+const NAME = 'YOUR NAME HERE';
+document.title = NAME; document.getElementById('title').textContent = NAME;
+let code = '';
+const $ = id => document.getElementById(id);
+function hint(){ $('hint').textContent = code ? 'What should I change?' : 'What app do you want?'; $('go').textContent = code ? 'Apply change' : 'Build it'; }
+hint();
+$('go').onclick = async () => {
+  const prompt = $('prompt').value.trim(); if (!prompt) return;
+  $('go').disabled = true; $('msg').textContent = 'Building…';
+  try {
+    const r = await fetch('/api/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt, code})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'Failed');
+    code = d.html; $('pv').srcdoc = code; $('dl').disabled = false;
+    $('prompt').value = ''; $('msg').textContent = 'Done. Test it, then ask for changes.'; hint();
+  } catch (e) { $('msg').textContent = 'Error: ' + e.message; }
+  $('go').disabled = false;
+};
+$('dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([code],{type:'text/html'})); a.download = 'app.html'; a.click(); };
+$('reset').onclick = () => { code=''; $('pv').srcdoc=''; $('dl').disabled=true; $('msg').textContent=''; hint(); };
+</script></body></html>
